@@ -1,0 +1,37 @@
+=================================================================
+  HYDERABAD AQI ANALYSIS — SUMMARY REPORT
+=================================================================
+
+Generated  : 2026-09-20T21:36:17
+Dataset    : 2006 days  (2015-01-04 — 2020-07-01)
+
+AQI Statistics
+----------------------------------------
+  mean      : 109.46
+  median    : 106.0
+  min       : 22.0
+  max       : 737.0
+  std       : 51.62
+
+Category Distribution
+----------------------------------------
+  Good           : 131
+  Satisfactory   : 714
+  Moderate       : 1089
+  Poor           : 55
+  Very Poor      : 10
+  Severe         : 7
+
+Model Performance (5-fold time-series CV)
+----------------------------------------
+  Ridge Regression             RMSE=22.49  MAE=14.55  R²=0.7594
+  Random Forest                RMSE=21.22  MAE=12.60  R²=0.7858
+  XGBoost                      RMSE=21.57  MAE=12.89  R²=0.7787
+  Gradient Boosting            RMSE=21.97  MAE=12.33  R²=0.7705
+
+Best Model : Random Forest  (R²=0.7858, RMSE=21.222)
+
+30-day Forecast (avg/min/max AQI)
+  Avg=65.55  Min=63.09  Max=69.36
+
+=================================================================

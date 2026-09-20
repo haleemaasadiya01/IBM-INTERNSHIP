@@ -1,0 +1,81 @@
+{
+  "project": "Hyderabad AQI Analysis & Forecasting",
+  "generated": "2026-09-20T21:36:17",
+  "dataset": {
+    "rows": 2006,
+    "date_range": "2015-01-04 \u2014 2020-07-01",
+    "features": [
+      "Date",
+      "PM2.5",
+      "PM10",
+      "NO",
+      "NO2",
+      "NOx",
+      "NH3",
+      "CO",
+      "SO2",
+      "O3",
+      "Benzene",
+      "Toluene",
+      "Xylene",
+      "AQI",
+      "AQI_Bucket",
+      "Year",
+      "Month",
+      "DayOfYear",
+      "DayOfWeek",
+      "AQI_lag1",
+      "AQI_lag3",
+      "AQI_lag7",
+      "AQI_roll7",
+      "AQI_roll30"
+    ]
+  },
+  "aqi_stats": {
+    "mean": 109.46,
+    "median": 106.0,
+    "min": 22.0,
+    "max": 737.0,
+    "std": 51.62
+  },
+  "category_distribution": {
+    "Moderate": 1089,
+    "Satisfactory": 714,
+    "Good": 131,
+    "Poor": 55,
+    "Very Poor": 10,
+    "Severe": 7
+  },
+  "models": {
+    "Ridge Regression": {
+      "RMSE": 22.491,
+      "MAE": 14.555,
+      "R2": 0.7594
+    },
+    "Random Forest": {
+      "RMSE": 21.222,
+      "MAE": 12.597,
+      "R2": 0.7858
+    },
+    "XGBoost": {
+      "RMSE": 21.57,
+      "MAE": 12.888,
+      "R2": 0.7787
+    },
+    "Gradient Boosting": {
+      "RMSE": 21.966,
+      "MAE": 12.33,
+      "R2": 0.7705
+    }
+  },
+  "best_model": {
+    "name": "Random Forest",
+    "R2": 0.7858,
+    "RMSE": 21.222
+  },
+  "forecast_30day": {
+    "avg_aqi": 65.55,
+    "max_aqi": 69.36,
+    "min_aqi": 63.09
+  }
+}
