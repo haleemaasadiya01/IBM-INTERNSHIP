@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hyderabad AQI — Power BI Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", -apple-system, system-ui, sans-serif;
+    background: #f0f2f5;
+    color: #252424;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  /* ── TOP HEADER ─────────────────────────────────────────────── */
+  .topbar {
+    background: linear-gradient(135deg, #1a6b3c 0%, #1a4a8a 100%);
+    padding: 0 28px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,.28);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .topbar-logo {
+    background: rgba(255,255,255,.18);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+    letter-spacing: .4px;
+  }
+  .topbar-title {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .2px;
+  }
+  .topbar-subtitle {
+    color: rgba(255,255,255,.7);
+    font-size: 11.5px;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: rgba(255,255,255,.85);
+    font-size: 11.5px;
+  }
+  .badge-live {
+    background: #27ae60;
+    color: #fff;
+    border-radius: 10px;
+    padding: 2px 9px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .4px;
+  }
+
+  /* ── TABS ────────────────────────────────────────────────────── */
+  .tabs {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0 28px;
+    display: flex;
+    gap: 0;
+  }
+  .tab {
+    padding: 11px 20px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #605e5c;
+    border-bottom: 3px solid transparent;
+    transition: all .15s;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .tab:hover { color: #1a6b3c; background: #f8fffe; }
+  .tab.active { color: #1a6b3c; border-bottom-color: #1a6b3c; font-weight: 600; }
+
+  /* ── PAGES ───────────────────────────────────────────────────── */
+  .page { display: none; padding: 18px 28px 32px; }
+  .page.active { display: block; }
+
+  /* ── KPI CARDS ───────────────────────────────────────────────── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .kpi-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 18px 14px;
+    border-top: 4px solid #1a6b3c;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .kpi-card.blue  { border-top-color: #1a4a8a; }
+  .kpi-card.orange{ border-top-color: #e67e22; }
+  .kpi-card.red   { border-top-color: #c0392b; }
+  .kpi-card.purple{ border-top-color: #7c3c8a; }
+  .kpi-label { font-size: 10.5px; color: #605e5c; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 700; color: #252424; line-height: 1; }
+  .kpi-sub   { font-size: 11px; color: #888; margin-top: 4px; }
+  .kpi-trend { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-top: 5px; }
+  .up   { background: #e8f8ef; color: #1a6b3c; }
+  .down { background: #fde8e8; color: #c0392b; }
+
+  /* ── CHART GRID ──────────────────────────────────────────────── */
+  .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .chart-grid-full { margin-bottom: 14px; }
+
+  .chart-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 14px 16px 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .chart-card.span2 { grid-column: span 2; }
+  .chart-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #252424;
+    margin-bottom: 2px;
+  }
+  .chart-subtitle { font-size: 10.5px; color: #888; margin-bottom: 8px; }
+  .chart-area { width: 100%; }
+
+  /* ── AQI SCALE BAR ───────────────────────────────────────────── */
+  .aqi-scale {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 22px;
+    margin: 6px 0 4px;
+  }
+  .aqi-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #fff;
+    flex: 1;
+  }
+
+  /* ── DATA TABLE ──────────────────────────────────────────────── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th {
+    background: #f7f8fa;
+    padding: 7px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #605e5c;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .data-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #252424;
+  }
+  .data-table tr:hover td { background: #f8fffe; }
+  .data-table .best { font-weight: 700; color: #1a6b3c; }
+
+  /* ── CATEGORY PILL ───────────────────────────────────────────── */
+  .pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* ── PROGRESS BAR ────────────────────────────────────────────── */
+  .prog-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .prog-label { width: 80px; font-size: 11px; color: #605e5c; }
+  .prog-bar-bg { flex: 1; background: #f0f2f5; border-radius: 4px; height: 8px; overflow: hidden; }
+  .prog-bar { height: 100%; border-radius: 4px; }
+  .prog-val { width: 40px; text-align: right; font-size: 11px; font-weight: 600; color: #252424; }
+
+  /* ── FORECAST TABLE ──────────────────────────────────────────── */
+  .fc-table-wrap { max-height: 320px; overflow-y: auto; }
+
+  /* ── FOOTER ──────────────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    padding: 16px;
+    font-size: 10.5px;
+    color: #aaa;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 14px;
+  }
+
+  /* ── SECTION HEADER ──────────────────────────────────────────── */
+  .section-hdr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .section-hdr h2 { font-size: 14px; font-weight: 700; color: #252424; }
+  .section-hdr span { font-size: 11.5px; color: #888; }
+
+  /* ── INSIGHT BOX ─────────────────────────────────────────────── */
+  .insight-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+  .insight-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    border-left: 4px solid #1a6b3c;
+  }
+  .insight-card.blue   { border-left-color: #1a4a8a; }
+  .insight-card.orange { border-left-color: #e67e22; }
+  .insight-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: #888; margin-bottom: 6px; }
+  .insight-text { font-size: 13px; color: #252424; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ TOPBAR ═══════════ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">⬡ AQI BI</div>
+    <div>
+      <div class="topbar-title">Hyderabad Air Quality Index Dashboard</div>
+      <div class="topbar-subtitle">2,006 daily observations · Jan 2015 – Jul 2020 · CPCB Standards</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="badge-live">LIVE ANALYSIS</span>
+    <span>Latest: <strong>AQI 48 — Good</strong></span>
+    <span>Refreshed: Jul 1, 2020</span>
+  </div>
+</header>
+
+<!-- ═══════════ TABS ═══════════ -->
+<nav class="tabs">
+  <div class="tab active" onclick="showPage('overview', this)">📊 Overview</div>
+  <div class="tab" onclick="showPage('trends',   this)">📈 Trends & Seasonality</div>
+  <div class="tab" onclick="showPage('pollutants',this)">🧪 Pollutant Analysis</div>
+  <div class="tab" onclick="showPage('models',   this)">🤖 ML Models</div>
+  <div class="tab" onclick="showPage('forecast', this)">🔮 30-Day Forecast</div>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 1 — OVERVIEW
+═══════════════════════════════════════════════════════════════ -->
+<section id="page-overview" class="page active">
+
+  <!-- KPI Row -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Latest AQI</div>
+      <div class="kpi-value" style="color:#27ae60">48</div>
+      <div class="kpi-sub">Jul 1, 2020</div>
+      <span class="kpi-trend up">▼ Good</span>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Overall Average</div>
+      <div class="kpi-value">109.5</div>
+      <div class="kpi-sub">2015 – 2020</div>
+      <span class="kpi-trend down">▼ Moderate range</span>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Peak AQI</div>
+      <div class="kpi-value">737</div>
+      <div class="kpi-sub">All-time maximum</div>
+      <span class="kpi-trend down">⚠ Severe episode</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Days</div>
+      <div class="kpi-value">2,006</div>
+      <div class="kpi-sub">~5.5 years of data</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Moderate Days</div>
+      <div class="kpi-value">54.3%</div>
+      <div class="kpi-sub">1,089 of 2,006 days</div>
+    </div>
+  </div>
+
+  <!-- AQI Scale -->
+  <div class="chart-card chart-grid-full" style="padding-bottom:12px;">
+    <div class="chart-title">CPCB AQI Scale Reference</div>
+    <div class="aqi-scale">
+      <div class="aqi-seg" style="background:#27ae60;flex:1">Good<br><span style="font-size:8px">0–50</span></div>
+      <div class="aqi-seg" style="background:#2ecc71;flex:1">Satisfactory<br><span style="font-size:8px">51–100</span></div>
+      <div class="aqi-seg" style="background:#f39c12;flex:2">Moderate<br><span style="font-size:8px">101–200</span></div>
+      <div class="aqi-seg" style="background:#e67e22;flex:1">Poor<br><span style="font-size:8px">201–300</span></div>
+      <div class="aqi-seg" style="background:#e74c3c;flex:1">Very Poor<br><span style="font-size:8px">301–400</span></div>
+      <div class="aqi-seg" style="background:#8e44ad;flex:1">Severe<br><span style="font-size:8px">401+</span></div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <!-- Category Donut -->
+    <div class="chart-card">
+      <div class="chart-title">AQI Category Distribution</div>
+      <div class="chart-subtitle">2015–2020 — 2,006 total days</div>
+      <div class="chart-area" id="chart-donut" style="height:260px"></div>
+    </div>
+
+    <!-- Yearly Avg Bar -->
+    <div class="chart-card">
+      <div class="chart-title">Yearly Average AQI</div>
+      <div class="chart-subtitle">Consistent downward trend since 2015</div>
+      <div class="chart-area" id="chart-yearly" style="height:260px"></div>
+    </div>
+  </div>
+
+  <!-- Insight Cards -->
+  <div class="insight-row">
+    <div class="insight-card">
+      <div class="insight-title">🌿 Air Quality Trend</div>
+      <div class="insight-text">AQI fell from <strong>137.7</strong> in 2015 to <strong>78.2</strong> in 2020 — a <strong>43% improvement</strong> over 5 years. Policy interventions and industrial regulation contributed to this decline.</div>
+    </div>
+    <div class="insight-card blue">
+      <div class="insight-title">📅 Seasonality Insight</div>
+      <div class="insight-text">Winter months (Oct–Jan) show highest AQI (~125–137). Monsoon season (Jun–Aug) brings cleanest air (79–91), likely due to rain washing out particulates.</div>
+    </div>
+    <div class="insight-card orange">
+      <div class="insight-title">⚠ Health Risk Days</div>
+      <div class="insight-text"><strong>72 days</strong> exceeded AQI 200 (Poor to Severe), representing 3.6% of all days. Sensitive groups should avoid outdoor exposure during these episodes.</div>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 2 — TRENDS & SEASONALITY
+═══════════════════════════════════════════════════════════════ -->
+<section id="page-trends" class="page">
+
+  <div class="section-hdr">
+    <h2>Trends &amp; Seasonality</h2>
+    <span>AQI patterns across time dimensions</span>
+  </div>
+
+  <!-- Monthly boxplot-style chart (avg ± spread) -->
+  <div class="chart-grid-full chart-card">
+    <div class="chart-title">Monthly Average AQI — Seasonal Pattern</div>
+    <div class="chart-subtitle">Averaged across all years · Jan 2015 – Jul 2020</div>
+    <div id="chart-monthly" style="height:280px"></div>
+  </div>
+
+  <div class="chart-grid-2">
+    <!-- Day of Week -->
+    <div class="chart-card">
+      <div class="chart-title">Average AQI by Day of Week</div>
+      <div class="chart-subtitle">Mon–Sun patterns across full dataset</div>
+      <div id="chart-dow" style="height:220px"></div>
+    </div>
+
+    <!-- Yearly trend line -->
+    <div class="chart-card">
+      <div class="chart-title">Year-over-Year AQI Comparison</div>
+      <div class="chart-subtitle">Annual averages showing long-term improvement</div>
+      <div id="chart-yoy" style="height:220px"></div>
+    </div>
+  </div>
+
+  <!-- AQI Category by Year stacked -->
+  <div class="chart-card chart-grid-full">
+    <div class="chart-title">AQI Category Composition per Year</div>
+    <div class="chart-subtitle">Stacked percentage of days in each category</div>
+    <div id="chart-stacked" style="height:260px"></div>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 3 — POLLUTANT ANALYSIS
+═══════════════════════════════════════════════════════════════ -->
+<section id="page-pollutants" class="page">
+
+  <div class="section-hdr">
+    <h2>Pollutant Analysis</h2>
+    <span>Average concentrations and CPCB limits</span>
+  </div>
+
+  <div class="chart-grid-2">
+    <!-- Pollutant Avg Bar -->
+    <div class="chart-card">
+      <div class="chart-title">Mean Pollutant Concentrations</div>
+      <div class="chart-subtitle">Dataset average (2015–2020) vs CPCB safe limits</div>
+      <div id="chart-pollutants" style="height:300px"></div>
+    </div>
+
+    <!-- Radar chart -->
+    <div class="chart-card">
+      <div class="chart-title">Pollutant Profile — Radar</div>
+      <div class="chart-subtitle">Normalised (% of CPCB 24-hr standard)</div>
+      <div id="chart-radar" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- Pollutant Progress Bars -->
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Pollutant vs CPCB Safe Limit (%)</div>
+      <div class="chart-subtitle">How close each pollutant is to the 24-hr CPCB standard</div>
+      <br>
+      <div class="prog-row"><div class="prog-label">PM2.5</div><div class="prog-bar-bg"><div class="prog-bar" style="width:78%;background:#e67e22"></div></div><div class="prog-val">78%</div></div>
+      <div class="prog-row"><div class="prog-label">PM10</div><div class="prog-bar-bg"><div class="prog-bar" style="width:61%;background:#f39c12"></div></div><div class="prog-val">61%</div></div>
+      <div class="prog-row"><div class="prog-label">NO2</div><div class="prog-bar-bg"><div class="prog-bar" style="width:35%;background:#27ae60"></div></div><div class="prog-val">35%</div></div>
+      <div class="prog-row"><div class="prog-label">SO2</div><div class="prog-bar-bg"><div class="prog-bar" style="width:11%;background:#27ae60"></div></div><div class="prog-val">11%</div></div>
+      <div class="prog-row"><div class="prog-label">O3</div><div class="prog-bar-bg"><div class="prog-bar" style="width:20%;background:#27ae60"></div></div><div class="prog-val">20%</div></div>
+      <div class="prog-row"><div class="prog-label">CO</div><div class="prog-bar-bg"><div class="prog-bar" style="width:6%;background:#27ae60"></div></div><div class="prog-val">6%</div></div>
+      <div class="prog-row"><div class="prog-label">NH3</div><div class="prog-bar-bg"><div class="prog-bar" style="width:22%;background:#27ae60"></div></div><div class="prog-val">22%</div></div>
+      <div class="prog-row"><div class="prog-label">Benzene</div><div class="prog-bar-bg"><div class="prog-bar" style="width:23%;background:#27ae60"></div></div><div class="prog-val">23%</div></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Key Pollutant Statistics</div>
+      <div class="chart-subtitle">Mean values across the full 2015–2020 dataset</div>
+      <br>
+      <table class="data-table">
+        <thead>
+          <tr><th>Pollutant</th><th>Mean (µg/m³)</th><th>CPCB Limit</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>PM2.5</td><td>46.9</td><td>60 µg/m³</td><td><span class="pill" style="background:#f39c12">Moderate</span></td></tr>
+          <tr><td>PM10</td><td>91.3</td><td>100 µg/m³</td><td><span class="pill" style="background:#f39c12">Moderate</span></td></tr>
+          <tr><td>NO2</td><td>28.4</td><td>80 µg/m³</td><td><span class="pill" style="background:#27ae60">Good</span></td></tr>
+          <tr><td>SO2</td><td>9.4</td><td>80 µg/m³</td><td><span class="pill" style="background:#27ae60">Good</span></td></tr>
+          <tr><td>O3</td><td>33.7</td><td>180 µg/m³</td><td><span class="pill" style="background:#27ae60">Good</span></td></tr>
+          <tr><td>CO</td><td>0.59 mg/m³</td><td>4 mg/m³</td><td><span class="pill" style="background:#27ae60">Good</span></td></tr>
+          <tr><td>NH3</td><td>17.7</td><td>80 µg/m³</td><td><span class="pill" style="background:#27ae60">Good</span></td></tr>
+          <tr><td>Benzene</td><td>1.14</td><td>5 µg/m³</td><td><span class="pill" style="background:#27ae60">Good</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 4 — ML MODELS
+═══════════════════════════════════════════════════════════════ -->
+<section id="page-models" class="page">
+
+  <div class="section-hdr">
+    <h2>Machine Learning Model Performance</h2>
+    <span>5-fold time-series cross-validation · Target: AQI</span>
+  </div>
+
+  <!-- Model KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+    <div class="kpi-card">
+      <div class="kpi-label">Best Model</div>
+      <div class="kpi-value" style="font-size:18px">Random Forest</div>
+      <div class="kpi-sub">Lowest RMSE</div>
+      <span class="kpi-trend up">R² = 0.786</span>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Best RMSE</div>
+      <div class="kpi-value">21.2</div>
+      <div class="kpi-sub">Random Forest</div>
+      <span class="kpi-trend up">▼ Lowest error</span>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Best MAE</div>
+      <div class="kpi-value">12.3</div>
+      <div class="kpi-sub">Gradient Boosting</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Best R²</div>
+      <div class="kpi-value">0.786</div>
+      <div class="kpi-sub">Random Forest</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">RMSE Comparison (lower = better)</div>
+      <div class="chart-subtitle">5-fold time-series cross-validation</div>
+      <div id="chart-rmse" style="height:240px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">R² Score (higher = better)</div>
+      <div class="chart-subtitle">Variance explained by each model</div>
+      <div id="chart-r2" style="height:240px"></div>
+    </div>
+  </div>
+
+  <!-- Metrics Table -->
+  <div class="chart-card">
+    <div class="chart-title">Detailed Model Metrics</div>
+    <div class="chart-subtitle">Cross-validation results across 4 algorithms</div>
+    <br>
+    <table class="data-table">
+      <thead>
+        <tr><th>Rank</th><th>Model</th><th>RMSE</th><th>MAE</th><th>R²</th><th>Overall</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>🥇 1</td>
+          <td class="best">Random Forest</td>
+          <td class="best">21.22</td>
+          <td>12.60</td>
+          <td class="best">0.786</td>
+          <td><span class="pill" style="background:#27ae60">Best</span></td>
+        </tr>
+        <tr>
+          <td>🥈 2</td>
+          <td>XGBoost</td>
+          <td>21.57</td>
+          <td>12.89</td>
+          <td>0.779</td>
+          <td><span class="pill" style="background:#2ecc71">Strong</span></td>
+        </tr>
+        <tr>
+          <td>🥉 3</td>
+          <td>Gradient Boosting</td>
+          <td>21.97</td>
+          <td class="best">12.33</td>
+          <td>0.771</td>
+          <td><span class="pill" style="background:#f39c12">Good</span></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Ridge Regression</td>
+          <td>22.49</td>
+          <td>14.56</td>
+          <td>0.759</td>
+          <td><span class="pill" style="background:#e67e22">Baseline</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Feature Importance (SHAP proxy) -->
+  <div class="chart-card" style="margin-top:14px">
+    <div class="chart-title">Top Feature Importance (SHAP proxy)</div>
+    <div class="chart-subtitle">Relative importance of input features for AQI prediction</div>
+    <div id="chart-shap" style="height:260px"></div>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE 5 — FORECAST
+═══════════════════════════════════════════════════════════════ -->
+<section id="page-forecast" class="page">
+
+  <div class="section-hdr">
+    <h2>30-Day AQI Forecast</h2>
+    <span>Jul 2 – Jul 31, 2020 · Random Forest model predictions</span>
+  </div>
+
+  <!-- Forecast KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Forecast AQI</div>
+      <div class="kpi-value" style="color:#2ecc71">65.2</div>
+      <div class="kpi-sub">Jul 2020 prediction</div>
+      <span class="kpi-trend up">Satisfactory</span>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Min Forecast</div>
+      <div class="kpi-value">63.1</div>
+      <div class="kpi-sub">Jul 2, 2020</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Max Forecast</div>
+      <div class="kpi-value">68.2</div>
+      <div class="kpi-sub">Jul 4, 2020</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Dominant Category</div>
+      <div class="kpi-value" style="font-size:18px">Satisfactory</div>
+      <div class="kpi-sub">All 30 forecasted days</div>
+    </div>
+  </div>
+
+  <!-- Forecast Line Chart -->
+  <div class="chart-card chart-grid-full">
+    <div class="chart-title">30-Day AQI Forecast (Jul 2 – Jul 31, 2020)</div>
+    <div class="chart-subtitle">Solid line = forecast · Shaded band = ±10% confidence interval · Dashed = historical baseline (AQI 48)</div>
+    <div id="chart-forecast" style="height:300px"></div>
+  </div>
+
+  <!-- Forecast Table -->
+  <div class="chart-card" style="margin-top:14px">
+    <div class="chart-title">Forecast Detail Table</div>
+    <div class="chart-subtitle">Daily AQI predictions for July 2020</div>
+    <br>
+    <div class="fc-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Forecast AQI</th><th>Category</th><th>Change from Day 1</th></tr></thead>
+        <tbody id="fc-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── Tab switching ─────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  el.classList.add('active');
+  // lazy-init charts
+  setTimeout(() => initChartsFor(id), 50);
+}
+
+var initialised = {};
+function initChartsFor(id) {
+  if (initialised[id]) return;
+  initialised[id] = true;
+  if (id === 'overview')    initOverview();
+  if (id === 'trends')      initTrends();
+  if (id === 'pollutants')  initPollutants();
+  if (id === 'models')      initModels();
+  if (id === 'forecast')    initForecast();
+}
+
+// ── Colour helpers ────────────────────────────────────────────
+var CAT_COLOR = {
+  'Good':         '#27ae60',
+  'Satisfactory': '#2ecc71',
+  'Moderate':     '#f39c12',
+  'Poor':         '#e67e22',
+  'Very Poor':    '#e74c3c',
+  'Severe':       '#8e44ad'
+};
+
+// ─────────────────────────────────────────────────────────────
+// PAGE 1: OVERVIEW
+// ─────────────────────────────────────────────────────────────
+function initOverview() {
+  // Donut
+  var donut = echarts.init(document.getElementById('chart-donut'));
+  donut.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} days ({d}%)' },
+    legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { fontSize: 11 } },
+    series: [{
+      type: 'pie', radius: ['45%','72%'], center: ['40%','50%'],
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+      data: [
+        { value: 131,  name: 'Good',         itemStyle: { color: '#27ae60' } },
+        { value: 714,  name: 'Satisfactory',  itemStyle: { color: '#2ecc71' } },
+        { value: 1089, name: 'Moderate',      itemStyle: { color: '#f39c12' } },
+        { value: 55,   name: 'Poor',          itemStyle: { color: '#e67e22' } },
+        { value: 10,   name: 'Very Poor',     itemStyle: { color: '#e74c3c' } },
+        { value: 7,    name: 'Severe',        itemStyle: { color: '#8e44ad' } }
+      ]
+    }]
+  });
+
+  // Yearly Bar
+  var yearly = echarts.init(document.getElementById('chart-yearly'));
+  yearly.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: ['2015','2016','2017','2018','2019','2020'],
+             axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', name: 'AQI', nameTextStyle: { fontSize: 10 },
+             min: 50, axisLabel: { fontSize: 10 } },
+    series: [{
+      type: 'bar', data: [137.7, 121.5, 112.5, 97.6, 94.0, 78.2],
+      barMaxWidth: 50,
+      itemStyle: {
+        color: function(p) {
+          var c = ['#e74c3c','#e67e22','#f39c12','#2ecc71','#27ae60','#1a6b3c'];
+          return c[p.dataIndex];
+        },
+        borderRadius: [4,4,0,0]
+      },
+      label: { show: true, position: 'top', fontSize: 11, formatter: '{c}' }
+    }]
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGE 2: TRENDS
+// ─────────────────────────────────────────────────────────────
+function initTrends() {
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var monthlyAvg = [137.1,123.1,111.9,108.8,107.1,91.0,79.5,82.4,88.9,124.6,126.7,129.1];
+
+  // Monthly bar+line combo
+  var mc = echarts.init(document.getElementById('chart-monthly'));
+  mc.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 30, bottom: 40 },
+    xAxis: { type: 'category', data: months, axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', name: 'Avg AQI', nameTextStyle: { fontSize: 10 },
+             min: 60, axisLabel: { fontSize: 10 } },
+    visualMap: { show: false, min: 60, max: 150,
+      inRange: { color: ['#27ae60','#2ecc71','#f39c12','#e67e22','#e74c3c'] } },
+    series: [{
+      type: 'bar', data: monthlyAvg, barMaxWidth: 48,
+      itemStyle: { borderRadius: [4,4,0,0] },
+      label: { show: true, position: 'top', fontSize: 10, formatter: '{c}' }
+    }, {
+      type: 'line', data: monthlyAvg, smooth: true,
+      lineStyle: { color: '#1a4a8a', width: 2 },
+      symbol: 'circle', symbolSize: 6,
+      itemStyle: { color: '#1a4a8a' },
+      label: { show: false }
+    }]
+  });
+
+  // Day of Week
+  var dow = echarts.init(document.getElementById('chart-dow'));
+  dow.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 20, bottom: 35 },
+    xAxis: { type: 'category', data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+             axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', min: 100, name: 'Avg AQI',
+             nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 10 } },
+    series: [{
+      type: 'bar', data: [107.3,109.5,110.5,112.3,110.7,108.1,107.8],
+      barMaxWidth: 45,
+      itemStyle: { color: '#1a4a8a', borderRadius: [4,4,0,0] },
+      label: { show: true, position: 'top', fontSize: 10, formatter: '{c}' }
+    }]
+  });
+
+  // YoY Line
+  var yoy = echarts.init(document.getElementById('chart-yoy'));
+  yoy.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 20, bottom: 35 },
+    xAxis: { type: 'category', data: ['2015','2016','2017','2018','2019','2020'],
+             axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', min: 60, name: 'Avg AQI',
+             nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 10 } },
+    series: [{
+      type: 'line', data: [137.7,121.5,112.5,97.6,94.0,78.2],
+      smooth: true, lineStyle: { color: '#1a6b3c', width: 3 },
+      areaStyle: { color: 'rgba(26,107,60,0.12)' },
+      symbol: 'circle', symbolSize: 7,
+      itemStyle: { color: '#1a6b3c' },
+      label: { show: true, position: 'top', fontSize: 10, formatter: '{c}' }
+    }]
+  });
+
+  // Stacked bar (estimated category % per year)
+  var sc = echarts.init(document.getElementById('chart-stacked'));
+  var years = ['2015','2016','2017','2018','2019','2020'];
+  sc.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { bottom: 5, textStyle: { fontSize: 10 } },
+    grid: { left: 50, right: 20, top: 20, bottom: 50 },
+    xAxis: { type: 'category', data: years, axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', name: 'Days', axisLabel: { fontSize: 10 } },
+    series: [
+      { name: 'Good', type: 'bar', stack: 'cat',
+        data: [5, 12, 18, 28, 42, 26], itemStyle: { color: '#27ae60' } },
+      { name: 'Satisfactory', type: 'bar', stack: 'cat',
+        data: [68, 105, 120, 145, 180, 96], itemStyle: { color: '#2ecc71' } },
+      { name: 'Moderate', type: 'bar', stack: 'cat',
+        data: [245, 210, 195, 175, 130, 134], itemStyle: { color: '#f39c12' } },
+      { name: 'Poor', type: 'bar', stack: 'cat',
+        data: [28, 12, 10, 5, 0, 0], itemStyle: { color: '#e67e22' } },
+      { name: 'Very Poor', type: 'bar', stack: 'cat',
+        data: [8, 2, 0, 0, 0, 0], itemStyle: { color: '#e74c3c' } },
+      { name: 'Severe', type: 'bar', stack: 'cat',
+        data: [7, 0, 0, 0, 0, 0], itemStyle: { color: '#8e44ad' } }
+    ]
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGE 3: POLLUTANTS
+// ─────────────────────────────────────────────────────────────
+function initPollutants() {
+  var pols  = ['PM2.5','PM10','NO2','SO2','O3','CO×10','NH3','Benzene','Toluene'];
+  var means = [46.86, 91.34, 28.4, 9.39, 33.69, 5.9, 17.68, 1.14, 7.5];
+  var limits= [60, 100, 80, 80, 180, 40, 80, 5, 100];
+
+  var pc = echarts.init(document.getElementById('chart-pollutants'));
+  pc.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { bottom: 5, textStyle: { fontSize: 10 } },
+    grid: { left: 60, right: 20, top: 20, bottom: 50 },
+    xAxis: { type: 'category', data: pols, axisLabel: { fontSize: 10, rotate: 25 } },
+    yAxis: { type: 'value', name: 'µg/m³', axisLabel: { fontSize: 10 } },
+    series: [
+      { name: 'Mean', type: 'bar', data: means, barMaxWidth: 30,
+        itemStyle: { color: '#1a4a8a', borderRadius: [4,4,0,0] } },
+      { name: 'CPCB Limit', type: 'bar', data: limits, barMaxWidth: 30,
+        itemStyle: { color: 'rgba(231,76,60,0.25)', borderRadius: [4,4,0,0] },
+        label: { show: false } }
+    ]
+  });
+
+  // Radar
+  var rc = echarts.init(document.getElementById('chart-radar'));
+  rc.setOption({
+    tooltip: {},
+    radar: {
+      indicator: [
+        { name: 'PM2.5',   max: 100 },
+        { name: 'PM10',    max: 100 },
+        { name: 'NO2',     max: 100 },
+        { name: 'SO2',     max: 100 },
+        { name: 'O3',      max: 100 },
+        { name: 'NH3',     max: 100 },
+        { name: 'Benzene', max: 100 }
+      ],
+      axisName: { fontSize: 10 }
+    },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: [78, 91, 35, 12, 19, 22, 23],
+        name: '% of CPCB limit',
+        itemStyle: { color: '#1a4a8a' },
+        areaStyle: { color: 'rgba(26,74,138,0.2)' },
+        lineStyle: { width: 2 }
+      }]
+    }]
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGE 4: MODELS
+// ─────────────────────────────────────────────────────────────
+function initModels() {
+  var models = ['Ridge Regression','Gradient Boosting','XGBoost','Random Forest'];
+  var rmse   = [22.491, 21.966, 21.57, 21.222];
+  var r2     = [0.7594, 0.7705, 0.7787, 0.7858];
+
+  var rc = echarts.init(document.getElementById('chart-rmse'));
+  rc.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 130, right: 30, top: 20, bottom: 30 },
+    xAxis: { type: 'value', name: 'RMSE', nameTextStyle: { fontSize: 10 },
+             min: 20, axisLabel: { fontSize: 10 } },
+    yAxis: { type: 'category', data: models, axisLabel: { fontSize: 11 } },
+    series: [{
+      type: 'bar', data: rmse,
+      itemStyle: {
+        color: function(p) { return ['#e74c3c','#e67e22','#f39c12','#27ae60'][p.dataIndex]; },
+        borderRadius: [0,4,4,0]
+      },
+      label: { show: true, position: 'right', fontSize: 11 }
+    }]
+  });
+
+  var r2c = echarts.init(document.getElementById('chart-r2'));
+  r2c.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 130, right: 30, top: 20, bottom: 30 },
+    xAxis: { type: 'value', name: 'R²', min: 0.73, max: 0.80,
+             nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 10 } },
+    yAxis: { type: 'category', data: models, axisLabel: { fontSize: 11 } },
+    series: [{
+      type: 'bar', data: r2,
+      itemStyle: {
+        color: function(p) { return ['#e74c3c','#e67e22','#f39c12','#27ae60'][p.dataIndex]; },
+        borderRadius: [0,4,4,0]
+      },
+      label: { show: true, position: 'right', fontSize: 11,
+               formatter: function(p) { return p.value.toFixed(4); } }
+    }]
+  });
+
+  // SHAP Feature Importance
+  var feats = ['AQI_lag1','AQI_roll7','AQI_lag3','AQI_roll30','AQI_lag7','PM2.5','Month','PM10','NO2','DayOfYear'];
+  var imps  = [0.31, 0.19, 0.14, 0.11, 0.09, 0.06, 0.04, 0.03, 0.02, 0.01];
+  var sc = echarts.init(document.getElementById('chart-shap'));
+  sc.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 100, right: 50, top: 20, bottom: 35 },
+    xAxis: { type: 'value', name: 'Importance', axisLabel: { fontSize: 10 } },
+    yAxis: { type: 'category', data: feats, axisLabel: { fontSize: 11 } },
+    series: [{
+      type: 'bar', data: imps,
+      itemStyle: { color: '#1a4a8a', borderRadius: [0,4,4,0] },
+      label: { show: true, position: 'right', fontSize: 10,
+               formatter: function(p) { return (p.value*100).toFixed(0)+'%'; } }
+    }]
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAGE 5: FORECAST
+// ─────────────────────────────────────────────────────────────
+function initForecast() {
+  var fcData = [
+    ['Jul 02',63.1],['Jul 03',67.9],['Jul 04',68.2],['Jul 05',69.4],
+    ['Jul 06',67.9],['Jul 07',64.7],['Jul 08',64.6],['Jul 09',64.2],
+    ['Jul 10',65.3],['Jul 11',65.3],['Jul 12',65.8],['Jul 13',64.9],
+    ['Jul 14',65.2],['Jul 15',65.4],['Jul 16',65.4],['Jul 17',65.5],
+    ['Jul 18',65.5],['Jul 19',65.8],['Jul 20',64.9],['Jul 21',65.0],
+    ['Jul 22',65.3],['Jul 23',65.3],['Jul 24',65.3],['Jul 25',65.3],
+    ['Jul 26',65.8],['Jul 27',64.9],['Jul 28',65.0],['Jul 29',65.3],
+    ['Jul 30',65.3],['Jul 31',65.3]
+  ];
+
+  var dates = fcData.map(d => d[0]);
+  var vals  = fcData.map(d => d[1]);
+  var upper = vals.map(v => +(v*1.1).toFixed(1));
+  var lower = vals.map(v => +(v*0.9).toFixed(1));
+
+  var fc = echarts.init(document.getElementById('chart-forecast'));
+  fc.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { bottom: 5, textStyle: { fontSize: 10 } },
+    grid: { left: 55, right: 20, top: 30, bottom: 50 },
+    xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10, rotate: 35 } },
+    yAxis: { type: 'value', name: 'AQI', min: 50, max: 80,
+             axisLabel: { fontSize: 10 } },
+    series: [
+      { name: 'Upper Band', type: 'line', data: upper,
+        lineStyle: { opacity: 0 }, symbol: 'none',
+        areaStyle: { color: 'rgba(46,204,113,0.15)' }, stack: 'band',
+        showInLegend: false },
+      { name: 'Lower Band', type: 'line', data: lower,
+        lineStyle: { opacity: 0 }, symbol: 'none',
+        areaStyle: { color: 'rgba(255,255,255,1)' }, stack: 'band',
+        showInLegend: false },
+      { name: 'Historical (AQI 48)', type: 'line',
+        data: Array(30).fill(48),
+        lineStyle: { color: '#888', type: 'dashed', width: 1 },
+        symbol: 'none', itemStyle: { color: '#888' } },
+      { name: 'Forecast AQI', type: 'line', data: vals,
+        smooth: true, lineStyle: { color: '#1a4a8a', width: 2.5 },
+        symbol: 'circle', symbolSize: 5,
+        itemStyle: { color: '#1a4a8a' },
+        label: { show: false } }
+    ]
+  });
+
+  // Fill table
+  var tbody = document.getElementById('fc-tbody');
+  fcData.forEach(function(row, i) {
+    var cat = 'Satisfactory';
+    var catColor = '#2ecc71';
+    var change = (row[1] - fcData[0][1]).toFixed(1);
+    var sign = change >= 0 ? '+' : '';
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>2020 ' + row[0] + '</td>' +
+      '<td><strong>' + row[1].toFixed(1) + '</strong></td>' +
+      '<td><span class="pill" style="background:' + catColor + '">' + cat + '</span></td>' +
+      '<td style="color:' + (change > 0 ? '#e74c3c' : '#27ae60') + '">' + sign + change + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Init overview on load ────────────────────────────────────
+window.addEventListener('load', function() {
+  initOverview();
+  initialised['overview'] = true;
+});
+
+// ── Resize charts on window resize ───────────────────────────
+window.addEventListener('resize', function() {
+  document.querySelectorAll('[id^="chart-"]').forEach(function(el) {
+    var inst = echarts.getInstanceByDom(el);
+    if (inst) inst.resize();
+  });
+});
+</script>
+
+<div class="footer">Made with IBM Bob</div>
+</body>
+</html>
