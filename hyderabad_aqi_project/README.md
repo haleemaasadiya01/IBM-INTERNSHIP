@@ -21,8 +21,8 @@ hyderabad_aqi_project/
 ├── app/
 │   └── streamlit_app.py          # Interactive dashboard
 ├── docs/
-│   └── HaleemaSadiya_ProjectReport.docx  # Full project documentation
-├── HaleemaSadiya_ProjectName.py          # All-in-one pipeline (single file)
+│   └── HaleemaSadiya_hydaqi.docx  # Full project documentation
+├── HaleemaSadiya_hydaqi.py          # All-in-one pipeline (single file)
 ├── requirements.txt
 └── README.md
 ```
@@ -40,7 +40,7 @@ pip install -r requirements.txt
 ### 2. Run the full pipeline
 
 ```bash
-python HaleemaSadiya_ProjectName.py
+python HaleemaSadiya_hydaqi.py
 ```
 
 This executes all six steps in order:
@@ -57,12 +57,12 @@ This executes all six steps in order:
 ### 3. Run a single step
 
 ```bash
-python HaleemaSadiya_ProjectName.py --step preprocess
-python HaleemaSadiya_ProjectName.py --step eda
-python HaleemaSadiya_ProjectName.py --step models
-python HaleemaSadiya_ProjectName.py --step forecast
-python HaleemaSadiya_ProjectName.py --step shap
-python HaleemaSadiya_ProjectName.py --step summary
+python HaleemaSadiya_hydaqi.py --step preprocess
+python HaleemaSadiya_hydaqi.py --step eda
+python HaleemaSadiya_hydaqi.py --step models
+python HaleemaSadiya_hydaqi.py --step forecast
+python HaleemaSadiya_hydaqi.py --step shap
+python HaleemaSadiya_hydaqi.py --step summary
 ```
 
 ### 4. Launch the dashboard
